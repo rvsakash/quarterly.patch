@@ -1,7 +1,7 @@
 pipeline {
     agent any
 
-    // 1. Production Parameters: Isse Jenkins UI par dynamic input box ban jayega
+    // Production Parameters: Isse Jenkins UI par dynamic input box bana rahega
     parameters {
         string(
             name: 'TARGET_IP', 
@@ -10,11 +10,8 @@ pipeline {
         )
     }
 
-    triggers {
-        cron('H/5 * * * *')
-    }
-
     environment {
+        // Jenkins credentials se secure password uthane ke liye
         VAULT_PASS = credentials('ansible-vault-pass')
     }
 
@@ -32,14 +29,14 @@ pipeline {
                 echo "🛠️ Executing Live Ansible Playbook on Target Server: ${params.TARGET_IP}"
                 
                 script {
-                    // 2. Secret Vault password file create karein
+                    // 1. Secret Vault password file create karein
                     sh 'echo "$VAULT_PASS" > .vault_pass.txt'
                     
                     try {
-                        // 3. Dynamic Injection: -e se target_ip ka variable pipeline se direct Ansible hosts.ini mein chala jayega
+                        // 2. Dynamic Injection: -e se target_ip ka variable pipeline se direct Ansible hosts.ini mein chala jayega
                         sh "ansible-playbook quarterly_patching.yml -i hosts.ini --vault-password-file .vault_pass.txt -e 'target_ip=${params.TARGET_IP}'"
                     } finally {
-                        // 4. Safe Cleanup
+                        // 3. Safe Cleanup: Task poora hote hi password file delete ho jayegi
                         sh 'rm -f .vault_pass.txt'
                     }
                 }
