@@ -1,37 +1,45 @@
 pipeline {
     agent any
 
+    // 1. Production Parameters: Isse Jenkins UI par dynamic input box ban jayega
+    parameters {
+        string(
+            name: 'TARGET_IP', 
+            defaultValue: '10.220.0.13', 
+            description: 'Jis Client Node ko patch aur reboot karna hai, uska IP address yahan dalein.'
+        )
+    }
+
     triggers {
-        // Yeh har 5 minute mein GitHub scan karega aur naye code par automatic chalega
         cron('H/5 * * * *')
     }
 
     environment {
-        // Yeh line Jenkins se password utha kar ek variable mein save karegi
         VAULT_PASS = credentials('ansible-vault-pass')
     }
 
     stages {
         stage('Initial Validation') {
             steps {
-                echo "🚀 Jenkins Pipeline Triggered Automatically!"
-                echo "📁 Processing Branch Name: ${env.BRANCH_NAME}"
+                echo "🚀 Jenkins Pipeline Triggered!"
+                echo "📁 Branch Name: ${env.BRANCH_NAME}"
+                echo "🎯 Target Client IP to Patch: ${params.TARGET_IP}"
             }
         }
 
         stage('Execute System Patching & Reboot') {
             steps {
-                echo "🛠️ Executing Live Ansible Playbook on Target Servers..."
+                echo "🛠️ Executing Live Ansible Playbook on Target Server: ${params.TARGET_IP}"
                 
                 script {
-                    // 1. Ek temporary file mein password likhein taaki Ansible use padh sake
+                    // 2. Secret Vault password file create karein
                     sh 'echo "$VAULT_PASS" > .vault_pass.txt'
                     
                     try {
-                        // 2. ASLI COMMAND: Yeh hosts.ini aur vault file dono ko lekar playbook chalayegi
-                        sh "ansible-playbook quarterly_patching.yml -i hosts.ini --vault-password-file .vault_pass.txt"
+                        // 3. Dynamic Injection: -e se target_ip ka variable pipeline se direct Ansible hosts.ini mein chala jayega
+                        sh "ansible-playbook quarterly_patching.yml -i hosts.ini --vault-password-file .vault_pass.txt -e 'target_ip=${params.TARGET_IP}'"
                     } finally {
-                        // 3. Security ke liye password file ko workspace se turant delete karein
+                        // 4. Safe Cleanup
                         sh 'rm -f .vault_pass.txt'
                     }
                 }
@@ -41,15 +49,19 @@ pipeline {
 
     post {
         always {
-            script {
-                echo '🧹 Post-build actions completed. System clean!'
+            script { 
+                echo '🧹 Post-build actions completed. Environment is clean!' 
             }
         }
         success {
-            script { echo "🎉 Patching and Reboot successful on branch: ${env.BRANCH_NAME}" }
+            script { 
+                echo "🎉 SUCCESS: Patching and Reboot successfully finished on ${params.TARGET_IP}!" 
+            }
         }
         failure {
-            script { echo "❌ Build FAILED! Please check the console output logs." }
+            script { 
+                echo "❌ FAILURE: Build failed for ${params.TARGET_IP}. Check logs above." 
+            }
         }
     }
 }
