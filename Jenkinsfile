@@ -1,15 +1,15 @@
 pipeline {
-    // 1. Jenkins ko batata hai ki kisi bhi available worker node par ise chalayein
+    // Jenkins ko batata hai ki kisi bhi available worker node par ise chalayein
     agent any
 
-    // 2. Multibranch pipelines ke liye automatic triggers configuration
+    // Multibranch pipelines ke liye automatic triggers configuration
     triggers {
         // Har 5 minute mein GitHub scan karega agar webhook configure nahi hai
         cron('H/5 * * * *')
     }
 
     stages {
-        // Stage 1: Sirf test karne ke liye ki branch aur basic setup sahi hai ya nahi
+        // Stage 1: Validation aur check ki kaunsi branch chal rahi hai
         stage('Initial Validation') {
             steps {
                 echo "🚀 Jenkins Pipeline Triggered Automatically!"
@@ -18,22 +18,23 @@ pipeline {
             }
         }
 
-        // Stage 2: Yahan aapki actual system patching ka workflow chalega
-        stage('Execute System Patching') {
+        // Stage 2: Yahan aapki actual system patching aur reboot ka workflow chalega
+        stage('Execute System Patching & Reboot') {
             steps {
-                echo "🛠️ Starting Ansible Playbook Execution..."
-                // Agar aapko ansible chalana hai toh is line ka syntax standard rakhein:
-                // sh "ansible-playbook quarterly_patching.yml -i hosts.ini"
-                echo "✅ Ansible playbook executed successfully on targets."
+                echo "🛠️ Executing Live Ansible Playbook on Target Servers..."
+                
+                // ASLI COMMAND: Yeh aapki repository ki Ansible playbook ko run karegi
+                sh "ansible-playbook quarterly_patching.yml"
+                
+                echo "✅ Ansible execution and patching workflow finished."
             }
         }
     }
 
-    // 3. Post Actions Setup (Yahan pehle syntax error aa raha tha, ab bilkul theek hai)
+    // Post Actions Setup (Cleanup aur Status notification)
     post {
         always {
             script {
-                // sh or echo commands yahan bina kisi error ke kaam karenge
                 echo '🧹 Post-build actions started...'
                 echo 'Enforcing zero disk retention: Wiping temporary workspace keys...'
                 sh "echo 'Cleanup task completed! Clear temporary build tokens...'"
