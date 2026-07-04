@@ -1,0 +1,6 @@
+---
+# Variable configuration file for system_patching role
+required_free_space_gb: 2
+production_precheck_dir: "/opt/pre_check"
+log_dir: "/var/log/ansible_patching"
+
